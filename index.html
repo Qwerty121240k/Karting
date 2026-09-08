@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Feedback & Module D Tracker</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- AUTHENTICATION OVERLAY / MODAL -->
+  <div id="auth-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 border border-slate-100">
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-brand-600 text-2xl border border-brand-100">
+          <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-900">Sign In to Portal</h2>
+        <p class="text-xs text-slate-500 mt-1">Select your role and log in to submit feedback or manage actions.</p>
+      </div>
+
+      <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Your Name / ID *</label>
+          <input type="text" id="login-name" required placeholder="e.g. Alex Morgan or Student ID" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Role *</label>
+          <select id="login-role" required class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition bg-white">
+            <option value="Student">Student (Submit Feedback)</option>
+            <option value="Student Representative">Student Representative</option>
+            <option value="Council Executive">Council Executive</option>
+            <option value="Faculty Observer">Faculty Observer</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span>Start Session</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Header / Navigation -->
+  <header class="bg-brand-900 text-white shadow-lg sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-brand-600 rounded-lg shadow">
+          <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">Student Feedback Tracker</h1>
+          <p class="text-xs text-brand-100">Module D Evidence Auditor & Audit Trail</p>
+        </div>
+      </div>
+      
+      <!-- User Profile & Tab Navigation -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- User Badge -->
+        <div id="user-badge" class="hidden bg-brand-800/80 border border-brand-700 px-3 py-1.5 rounded-xl flex items-center space-x-2 text-xs">
+          <i class="fa-solid fa-circle-user text-brand-500 text-base"></i>
+          <div>
+            <div id="current-user-name" class="font-bold text-white">Guest</div>
+            <div id="current-user-role" class="text-[10px] text-brand-100">Not logged in</div>
+          </div>
+          <button onclick="handleLogout()" class="ml-2 text-brand-100 hover:text-white p-1" title="Switch User / Logout">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <nav class="flex space-x-1 bg-brand-900/60 p-1 rounded-xl border border-brand-700/50">
+          <button id="nav-log" onclick="switchTab('log')" class="px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 bg-white text-brand-900 shadow">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Log Feedback</span>
+          </button>
+          <button id="nav-list" onclick="switchTab('list')" class="px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 text-brand-100 hover:text-white hover:bg-brand-700/50">
+            <i class="fa-solid fa-list-check"></i>
+            <span>Feedback Vault</span>
+            <span id="badge-count" class="ml-1 px-2 py-0.5 text-[10px] rounded-full bg-brand-600 text-white font-semibold">0</span>
+          </button>
+          <button id="nav-audit" onclick="switchTab('audit')" class="px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 text-brand-100 hover:text-white hover:bg-brand-700/50">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Action History</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-8 sm:px-6 lg:px-8">
+
+    <!-- TAB 1: LOG FEEDBACK FORM & REAL-TIME AUDIT -->
+    <section id="tab-log" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Left Column: Form -->
+      <div class="lg:col-span-7 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200">
+        <div class="border-b border-slate-100 pb-4 mb-6">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-plus-circle text-brand-600"></i>
+            Submit Class Feedback
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">Logged in students can submit structured feedback directly to representatives.</p>
+        </div>
+
+        <form id="feedback-form" onsubmit="handleFormSubmit(event)" class="space-y-5">
+          <!-- Hidden ID for Editing -->
+          <input type="hidden" id="edit-id" value="">
+
+          <!-- Class/Module & Submitter Name -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Module / Course Code *</label>
+              <input type="text" id="input-course" required placeholder="e.g. CS101, ENG202" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Student / Rep Name *</label>
+              <input type="text" id="input-rep" required placeholder="e.g. Alex Morgan" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition">
+            </div>
+          </div>
+
+          <!-- Category, Priority & Consideration Status -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Category *</label>
+              <select id="input-category" required class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition bg-white">
+                <option value="Curriculum & Content">Curriculum & Content</option>
+                <option value="Assessment & Grading">Assessment & Grading</option>
+                <option value="Facilities & Tech">Facilities & Tech</option>
+                <option value="Teaching & Support">Teaching & Support</option>
+                <option value="Student Wellbeing">Student Wellbeing</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Priority Level *</label>
+              <select id="input-priority" required class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition bg-white">
+                <option value="Low">Low (Routine Observation)</option>
+                <option value="Medium" selected>Medium (Affects Group)</option>
+                <option value="High">High (Urgent / Critical)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Consideration Status *</label>
+              <select id="input-status" required class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition bg-white">
+                <option value="Under Consideration" selected>Under Consideration</option>
+                <option value="Approved for Action">Approved for Action</option>
+                <option value="In Review">In Review</option>
+                <option value="Rejected / Closed">Rejected / Closed</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Problem Statement -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Observation / Issue Description *</label>
+            <textarea id="input-issue" required rows="4" oninput="runLiveAudit()" placeholder="Describe the issue clearly. What is happening? (e.g., Lab PCs lack essential compiler software for 80% of students...)" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition"></textarea>
+          </div>
+
+          <!-- Proposed Solution -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Constructive Solution / Action Item *</label>
+            <textarea id="input-solution" required rows="3" oninput="runLiveAudit()" placeholder="What specific action should the department take? (e.g., Request IT to install VS Code by Friday...)" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition"></textarea>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" id="btn-submit" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span>Submit Feedback</span>
+            </button>
+            <button type="button" onclick="resetForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-3 px-4 rounded-xl transition">
+              Reset
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right Column: Live Module D Validator Panel -->
+      <div class="lg:col-span-5 flex flex-col gap-6">
+        <div class="bg-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-xl flex-1 flex flex-col justify-between border border-slate-800">
+          <div>
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-microchip text-brand-500 text-lg"></i>
+                <h3 class="font-bold text-sm uppercase tracking-wider text-slate-200">Module D Live Auditor</h3>
+              </div>
+              <span id="audit-badge" class="text-xs px-2.5 py-1 rounded-full font-bold bg-slate-800 text-slate-400">
+                Awaiting Input
+              </span>
+            </div>
+
+            <!-- Score Gauge -->
+            <div class="my-6 flex items-center space-x-6">
+              <div class="relative flex items-center justify-center w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700" id="score-circle">
+                <span id="audit-score" class="text-3xl font-extrabold text-slate-400">0%</span>
+              </div>
+              <div>
+                <h4 id="audit-status" class="text-lg font-bold text-slate-100">Incomplete Entry</h4>
+                <p id="audit-subtitle" class="text-xs text-slate-400 mt-1">Fill out the fields to measure compliance against standards.</p>
+              </div>
+            </div>
+
+            <!-- Checklist -->
+            <div class="space-y-3">
+              <h5 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Compliance Rubric Checklist:</h5>
+
+              <div id="check-constructive" class="flex items-start space-x-3 text-xs p-2.5 rounded-lg bg-slate-800/50 text-slate-400 border border-slate-700/50">
+                <i class="fa-solid fa-circle-xmark text-red-400 text-sm mt-0.5"></i>
+                <div>
+                  <span class="font-bold text-slate-300">Actionable Solution:</span> Proposes a clear, realistic remedy rather than just complaining (&gt;15 characters).
+                </div>
+              </div>
+
+              <div id="check-clarity" class="flex items-start space-x-3 text-xs p-2.5 rounded-lg bg-slate-800/50 text-slate-400 border border-slate-700/50">
+                <i class="fa-solid fa-circle-xmark text-red-400 text-sm mt-0.5"></i>
+                <div>
+                  <span class="font-bold text-slate-300">Detailed Description:</span> Clear, objective description of the issue (&gt;25 characters).
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Module D Info Box -->
+          <div class="mt-6 p-4 rounded-xl bg-brand-950/60 border border-brand-800/50 text-xs text-brand-200">
+            <p class="font-semibold text-brand-300 mb-1"><i class="fa-solid fa-circle-info mr-1"></i> Consideration Workflow</p>
+            <p class="text-slate-300">High Module D compliance increases the probability of feedback being flagged as <strong>"Under Consideration"</strong> or <strong>"Approved for Action"</strong> by review committees.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: FEEDBACK VAULT (LOGGED FEEDBACK LIST) -->
+    <section id="tab-list" class="hidden space-y-6">
+      
+      <!-- Top Actions Bar -->
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+        <!-- Search & Filters -->
+        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div class="relative flex-1 sm:w-60">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+            <input type="text" id="filter-search" oninput="renderFeedbackList()" placeholder="Search feedback..." class="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+          </div>
+          <select id="filter-consideration" onchange="renderFeedbackList()" class="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+            <option value="ALL">All Consideration Statuses</option>
+            <option value="Under Consideration">Under Consideration</option>
+            <option value="Approved for Action">Approved for Action</option>
+            <option value="In Review">In Review</option>
+            <option value="Rejected / Closed">Rejected / Closed</option>
+          </select>
+          <select id="filter-status" onchange="renderFeedbackList()" class="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+            <option value="ALL">All Compliance Levels</option>
+            <option value="PASS">Module D Compliant</option>
+            <option value="FAIL">Needs Detail</option>
+          </select>
+        </div>
+
+        <!-- Sample Data / Clear Data buttons -->
+        <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+          <button onclick="loadSampleData()" class="px-3.5 py-2 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200 transition">
+            <i class="fa-solid fa-vial mr-1"></i> Load Samples
+          </button>
+          <button onclick="clearAllData()" class="px-3.5 py-2 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition">
+            <i class="fa-solid fa-trash-can mr-1"></i> Clear All
+          </button>
+        </div>
+      </div>
+
+      <!-- Feedback Cards List -->
+      <div id="feedback-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- TAB 3: ACTION HISTORY LOG -->
+    <section id="tab-audit" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-6">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-brand-600"></i>
+              System Action History Log
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">Records actions performed by logged-in users (Students, Reps, and Executives).</p>
+          </div>
+          <button onclick="clearActionLogs()" class="text-xs text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 font-semibold transition self-start sm:self-auto">
+            <i class="fa-solid fa-broom mr-1"></i> Clear Log
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-700 uppercase font-bold border-y border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Timestamp</th>
+                <th class="py-3 px-4">User Name</th>
+                <th class="py-3 px-4">Role</th>
+                <th class="py-3 px-4">Action Event</th>
+                <th class="py-3 px-4">Details</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body" class="divide-y divide-slate-100">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-auto">
+    <p>Student Governance & Module D Quality Assurance Toolkit &bull; Built for GitHub Pages hosting</p>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    // LocalStorage Keys
+    const STORAGE_KEY = 'student_council_feedback_v4';
+    const USER_KEY = 'student_council_user_v1';
+    const LOGS_KEY = 'student_council_action_logs_v1';
+
+    // Application State
+    let feedbackItems = [];
+    let currentUser = null;
+    let actionLogs = [];
+
+    // On Load Initializer
+    document.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      loadUser();
+      loadActionLogs();
+      updateBadge();
+    });
+
+    // --- AUTHENTICATION & USER SESSION ---
+    function loadUser() {
+      const storedUser = localStorage.getItem(USER_KEY);
+      if (storedUser) {
+        try {
+          currentUser = JSON.parse(storedUser);
+          showUserSessionUI();
+        } catch (e) {
+          currentUser = null;
+        }
+      }
+
+      if (!currentUser) {
+        document.getElementById('auth-modal').classList.remove('hidden');
+      }
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      const name = document.getElementById('login-name').value.trim();
+      const role = document.getElementById('login-role').value;
+
+      if (!name) return;
+
+      currentUser = { name, role, loginTime: new Date().toISOString() };
+      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+      
+      showUserSessionUI();
+      logAction('Student Sign In', `${name} signed in with role: ${role}.`);
+      document.getElementById('input-rep').value = name;
+    }
+
+    function handleLogout() {
+      if (currentUser) {
+        logAction('User Sign Out', `User ${currentUser.name} signed out.`);
+      }
+      currentUser = null;
+      localStorage.removeItem(USER_KEY);
+      document.getElementById('user-badge').classList.add('hidden');
+      document.getElementById('auth-modal').classList.remove('hidden');
+    }
+
+    function showUserSessionUI() {
+      document.getElementById('auth-modal').classList.add('hidden');
+      document.getElementById('current-user-name').innerText = currentUser.name;
+      document.getElementById('current-user-role').innerText = currentUser.role;
+      document.getElementById('user-badge').classList.remove('hidden');
+      
+      // Auto fill Student/Rep field with user name if empty
+      if (!document.getElementById('input-rep').value) {
+        document.getElementById('input-rep').value = currentUser.name;
+      }
+    }
+
+    // --- ACTION HISTORY LOGGING ---
+    function loadActionLogs() {
+      const storedLogs = localStorage.getItem(LOGS_KEY);
+      if (storedLogs) {
+        try { actionLogs = JSON.parse(storedLogs); } catch (e) { actionLogs = []; }
+      } else {
+        actionLogs = [];
+      }
+    }
+
+    function logAction(action, details) {
+      const logEntry = {
+        id: 'log_' + Date.now(),
+        timestamp: new Date().toLocaleString(),
+        user: currentUser ? currentUser.name : 'System',
+        role: currentUser ? currentUser.role : 'Student',
+        action,
+        details
+      };
+
+      actionLogs.unshift(logEntry);
+      localStorage.setItem(LOGS_KEY, JSON.stringify(actionLogs));
+      if (!document.getElementById('tab-audit').classList.contains('hidden')) {
+        renderActionLogs();
+      }
+    }
+
+    function renderActionLogs() {
+      const container = document.getElementById('audit-table-body');
+      if (actionLogs.length === 0) {
+        container.innerHTML = `
+          <tr>
+            <td colspan="5" class="py-8 text-center text-slate-400">No recorded action logs found.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      container.innerHTML = actionLogs.map(log => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-3 px-4 font-mono text-[11px] text-slate-500">${escapeHtml(log.timestamp)}</td>
+          <td class="py-3 px-4 font-bold text-slate-800">${escapeHtml(log.user)}</td>
+          <td class="py-3 px-4 text-slate-500">${escapeHtml(log.role)}</td>
+          <td class="py-3 px-4 font-semibold text-brand-700">${escapeHtml(log.action)}</td>
+          <td class="py-3 px-4 text-slate-600">${escapeHtml(log.details)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function clearActionLogs() {
+      if (confirm("Are you sure you want to clear action history?")) {
+        actionLogs = [];
+        localStorage.setItem(LOGS_KEY, JSON.stringify([]));
+        renderActionLogs();
+      }
+    }
+
+    // --- DATA MANAGEMENT ---
+    function loadData() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          feedbackItems = JSON.parse(stored);
+        } catch (e) {
+          feedbackItems = [];
+        }
+      } else {
+        feedbackItems = getSampleData();
+        saveData();
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(feedbackItems));
+      updateBadge();
+    }
+
+    function updateBadge() {
+      document.getElementById('badge-count').innerText = feedbackItems.length;
+    }
+
+    // --- MODULE D AUDIT ENGINE ---
+    function evaluateModuleD(item) {
+      const hasSolution = item.solution && item.solution.trim().length >= 15;
+      const hasClarity = item.issue && item.issue.trim().length >= 25;
+
+      let score = 0;
+      if (hasSolution) score += 50;
+      if (hasClarity) score += 50;
+
+      const isPassed = score >= 100;
+
+      return { score, isPassed, hasSolution, hasClarity };
+    }
+
+    // --- LIVE FORM AUDITOR ---
+    function runLiveAudit() {
+      const issue = document.getElementById('input-issue').value;
+      const solution = document.getElementById('input-solution').value;
+
+      const audit = evaluateModuleD({ issue, solution });
+
+      const scoreCircle = document.getElementById('score-circle');
+      const scoreText = document.getElementById('audit-score');
+      const statusText = document.getElementById('audit-status');
+      const badge = document.getElementById('audit-badge');
+      const subtitle = document.getElementById('audit-subtitle');
+
+      const checkConstructive = document.getElementById('check-constructive');
+      const checkClarity = document.getElementById('check-clarity');
+
+      scoreText.innerText = `${audit.score}%`;
+
+      if (audit.isPassed) {
+        scoreCircle.className = "relative flex items-center justify-center w-24 h-24 rounded-full bg-emerald-950/50 border-4 border-emerald-500 text-emerald-400";
+        scoreText.className = "text-3xl font-extrabold text-emerald-400";
+        statusText.innerText = "Module D Compliant";
+        statusText.className = "text-lg font-bold text-emerald-400";
+        badge.innerText = "PASSED";
+        badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+        subtitle.innerText = "Excellent. This item meets quality standards for consideration.";
+      } else {
+        scoreCircle.className = "relative flex items-center justify-center w-24 h-24 rounded-full bg-amber-950/50 border-4 border-amber-500 text-amber-400";
+        scoreText.className = "text-3xl font-extrabold text-amber-400";
+        statusText.innerText = "Needs Refinement";
+        statusText.className = "text-lg font-bold text-amber-400";
+        badge.innerText = "REVISION NEEDED";
+        badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+        subtitle.innerText = "Provide more detail or refine your solution to improve review status.";
+      }
+
+      updateCheckItem(checkConstructive, audit.hasSolution);
+      updateCheckItem(checkClarity, audit.hasClarity);
+    }
+
+    function updateCheckItem(element, isValid) {
+      const icon = element.querySelector('i');
+      if (isValid) {
+        element.className = "flex items-start space-x-3 text-xs p-2.5 rounded-lg bg-emerald-950/30 text-emerald-200 border border-emerald-800/50";
+        icon.className = "fa-solid fa-circle-check text-emerald-400 text-sm mt-0.5";
+      } else {
+        element.className = "flex items-start space-x-3 text-xs p-2.5 rounded-lg bg-slate-800/50 text-slate-400 border border-slate-700/50";
+        icon.className = "fa-solid fa-circle-xmark text-red-400 text-sm mt-0.5";
+      }
+    }
+
+    // --- FORM HANDLING ---
+    function handleFormSubmit(event) {
+      event.preventDefault();
+
+      const editId = document.getElementById('edit-id').value;
+      const course = document.getElementById('input-course').value.trim();
+      const rep = document.getElementById('input-rep').value.trim();
+      const category = document.getElementById('input-category').value;
+      const priority = document.getElementById('input-priority').value;
+      const status = document.getElementById('input-status').value;
+      const issue = document.getElementById('input-issue').value.trim();
+      const solution = document.getElementById('input-solution').value.trim();
+
+      const itemData = {
+        id: editId ? editId : 'fb_' + Date.now(),
+        course,
+        rep,
+        category,
+        priority,
+        status,
+        issue,
+        solution,
+        lastModifiedBy: currentUser ? currentUser.name : rep,
+        timestamp: new Date().toISOString()
+      };
+
+      if (editId) {
+        const index = feedbackItems.findIndex(i => i.id === editId);
+        if (index !== -1) feedbackItems[index] = itemData;
+        logAction('Updated Feedback', `Updated feedback for ${course} [${category}].`);
+      } else {
+        feedbackItems.unshift(itemData);
+        logAction('Submitted Feedback', `Student ${rep} submitted feedback for ${course} with status "${status}".`);
+      }
+
+      saveData();
+      resetForm();
+      switchTab('list');
+    }
+
+    function resetForm() {
+      document.getElementById('feedback-form').reset();
+      document.getElementById('edit-id').value = '';
+      document.getElementById('input-rep').value = currentUser ? currentUser.name : '';
+      document.getElementById('btn-submit').innerHTML = '<i class="fa-solid fa-paper-plane"></i><span>Submit Feedback</span>';
+      runLiveAudit();
+    }
+
+    function editItem(id) {
+      const item = feedbackItems.find(i => i.id === id);
+      if (!item) return;
+
+      document.getElementById('edit-id').value = item.id;
+      document.getElementById('input-course').value = item.course;
+      document.getElementById('input-rep').value = item.rep;
+      document.getElementById('input-category').value = item.category;
+      document.getElementById('input-priority').value = item.priority;
+      document.getElementById('input-status').value = item.status || 'Under Consideration';
+      document.getElementById('input-issue').value = item.issue;
+      document.getElementById('input-solution').value = item.solution;
+
+      document.getElementById('btn-submit').innerHTML = '<i class="fa-solid fa-pen-to-square"></i><span>Update Feedback</span>';
+      
+      switchTab('log');
+      runLiveAudit();
+    }
+
+    function updateConsiderationStatus(id, newStatus) {
+      const item = feedbackItems.find(i => i.id === id);
+      if (item) {
+        const oldStatus = item.status;
+        item.status = newStatus;
+        item.lastModifiedBy = currentUser ? currentUser.name : 'Unknown';
+        saveData();
+        renderFeedbackList();
+        logAction('Status Change', `Changed status of ${item.course} from "${oldStatus}" to "${newStatus}".`);
+      }
+    }
+
+    function deleteItem(id) {
+      const item = feedbackItems.find(i => i.id === id);
+      if (confirm("Are you sure you want to delete this feedback entry?")) {
+        feedbackItems = feedbackItems.filter(i => i.id !== id);
+        saveData();
+        renderFeedbackList();
+        if (item) {
+          logAction('Deleted Feedback', `Deleted feedback entry for ${item.course}.`);
+        }
+      }
+    }
+
+    // --- TAB NAVIGATION ---
+    function switchTab(tab) {
+      const tabs = ['log', 'list', 'audit'];
+      tabs.forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`nav-${t}`);
+        if (t === tab) {
+          el.classList.remove('hidden');
+          btn.className = "px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 bg-white text-brand-900 shadow";
+        } else {
+          el.classList.add('hidden');
+          btn.className = "px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center space-x-1.5 text-brand-100 hover:text-white hover:bg-brand-700/50";
+        }
+      });
+
+      if (tab === 'list') renderFeedbackList();
+      if (tab === 'audit') renderActionLogs();
+    }
+
+    // --- RENDER FEEDBACK LIST ---
+    function renderFeedbackList() {
+      const container = document.getElementById('feedback-cards-container');
+      const search = document.getElementById('filter-search').value.toLowerCase();
+      const statusFilter = document.getElementById('filter-status').value;
+      const considerFilter = document.getElementById('filter-consideration').value;
+
+      const filtered = feedbackItems.filter(item => {
+        const audit = evaluateModuleD(item);
+        const matchesSearch = item.course.toLowerCase().includes(search) || 
+                              item.issue.toLowerCase().includes(search) || 
+                              item.rep.toLowerCase().includes(search);
+        
+        const matchesStatus = statusFilter === 'ALL' || 
+                             (statusFilter === 'PASS' && audit.isPassed) || 
+                             (statusFilter === 'FAIL' && !audit.isPassed);
+
+        const matchesConsider = considerFilter === 'ALL' || (item.status || 'Under Consideration') === considerFilter;
+
+        return matchesSearch && matchesStatus && matchesConsider;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-white p-12 rounded-2xl text-center border border-slate-200">
+            <i class="fa-solid fa-folder-open text-4xl text-slate-300 mb-3"></i>
+            <h3 class="text-base font-bold text-slate-700">No Feedback Entries Found</h3>
+            <p class="text-xs text-slate-500 mt-1">Try adjusting filters or submit new feedback.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const audit = evaluateModuleD(item);
+        const priorityColors = {
+          High: 'bg-red-100 text-red-700 border-red-200',
+          Medium: 'bg-amber-100 text-amber-700 border-amber-200',
+          Low: 'bg-slate-100 text-slate-700 border-slate-200'
+        };
+
+        const currentStatus = item.status || 'Under Consideration';
+        const considerationBadges = {
+          'Under Consideration': 'bg-blue-100 text-blue-800 border-blue-200',
+          'Approved for Action': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          'In Review': 'bg-purple-100 text-purple-800 border-purple-200',
+          'Rejected / Closed': 'bg-slate-100 text-slate-600 border-slate-200'
+        };
+
+        return `
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+            <div>
+              <!-- Top Metadata & Priority -->
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <span class="px-2.5 py-1 text-xs font-bold rounded-lg ${priorityColors[item.priority] || priorityColors.Low} border">
+                  ${item.priority} Priority
+                </span>
+                
+                <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${audit.isPassed ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}">
+                  <i class="fa-solid ${audit.isPassed ? 'fa-circle-check text-emerald-600' : 'fa-circle-exclamation text-amber-600'} mr-1"></i>
+                  ${audit.isPassed ? 'Module D Compliant' : 'Needs Detail'}
+                </span>
+              </div>
+
+              <!-- Consideration Status Banner -->
+              <div class="mb-4 p-2.5 rounded-xl border flex items-center justify-between ${considerationBadges[currentStatus] || considerationBadges['Under Consideration']}">
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid fa-hourglass-half text-sm"></i>
+                  <span class="text-xs font-bold">Consideration: ${escapeHtml(currentStatus)}</span>
+                </div>
+                <!-- Interactive Quick Switch Dropdown -->
+                <select onchange="updateConsiderationStatus('${item.id}', this.value)" class="text-xs bg-white text-slate-700 border border-slate-300 rounded px-2 py-1 outline-none font-medium cursor-pointer">
+                  <option value="Under Consideration" ${currentStatus === 'Under Consideration' ? 'selected' : ''}>Under Consideration</option>
+                  <option value="Approved for Action" ${currentStatus === 'Approved for Action' ? 'selected' : ''}>Approved for Action</option>
+                  <option value="In Review" ${currentStatus === 'In Review' ? 'selected' : ''}>In Review</option>
+                  <option value="Rejected / Closed" ${currentStatus === 'Rejected / Closed' ? 'selected' : ''}>Rejected / Closed</option>
+                </select>
+              </div>
+
+              <div class="flex justify-between items-baseline mb-2">
+                <h3 class="font-bold text-slate-900 text-base">${escapeHtml(item.course)}</h3>
+                <span class="text-xs text-slate-400">${escapeHtml(item.category)}</span>
+              </div>
+
+              <!-- Content -->
+              <div class="space-y-2.5 text-xs text-slate-600">
+                <div>
+                  <strong class="text-slate-800">Issue:</strong>
+                  <p class="mt-0.5">${escapeHtml(item.issue)}</p>
+                </div>
+                <div>
+                  <strong class="text-slate-800">Proposed Solution:</strong>
+                  <p class="mt-0.5">${escapeHtml(item.solution)}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer / Rep Info & Actions -->
+            <div class="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+              <span><i class="fa-solid fa-user-pen mr-1"></i> ${escapeHtml(item.rep)} ${item.lastModifiedBy ? `<span class="text-[10px] text-slate-400">(Ed. ${escapeHtml(item.lastModifiedBy)})</span>` : ''}</span>
+              <div class="flex items-center space-x-2">
+                <button onclick="editItem('${item.id}')" class="p-1.5 text-slate-500 hover:text-brand-600 transition" title="Edit">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="deleteItem('${item.id}')" class="p-1.5 text-slate-500 hover:text-red-600 transition" title="Delete">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- HELPER FUNCTIONS ---
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function clearAllData() {
+      if (confirm("Are you sure you want to clear all feedback entries?")) {
+        feedbackItems = [];
+        saveData();
+        renderFeedbackList();
+        logAction('Cleared All Data', 'Cleared all stored feedback entries.');
+      }
+    }
+
+    function loadSampleData() {
+      feedbackItems = getSampleData();
+      saveData();
+      renderFeedbackList();
+      logAction('Loaded Sample Data', 'Reset workspace with default sample records.');
+    }
+
+    function getSampleData() {
+      return [
+        {
+          id: 'fb_101',
+          course: 'CS204 - Data Structures',
+          rep: 'Sarah Jenkins',
+          category: 'Facilities & Tech',
+          priority: 'High',
+          status: 'Approved for Action',
+          issue: 'Lab workstations lack necessary IDE software and compilers for weekly assignments affecting over 35 students.',
+          solution: 'Request IT Services to push automated software image updates to Lab B by Friday.',
+          timestamp: new Date().toISOString()
+        },
+        {
+          id: 'fb_102',
+          course: 'ENG101 - Academic Writing',
+          rep: 'Marcus Vance',
+          category: 'Assessment & Grading',
+          priority: 'Medium',
+          status: 'Under Consideration',
+          issue: 'Essay feedback turnaround time exceeds departmental guidelines by over two weeks.',
+          solution: 'Schedule a moderation review with module coordinator to streamline grading rubrics.',
+          timestamp: new Date().toISOString()
+        },
+        {
+          id: 'fb_103',
+          course: 'MATH301 - Linear Algebra',
+          rep: 'David Chen',
+          category: 'Teaching & Support',
+          priority: 'Low',
+          status: 'In Review',
+          issue: 'Office hours conflict directly with core mandatory physics lectures for most students.',
+          solution: 'Offer a secondary 1-hour office hour slot on Thursday afternoons or host online Q&A.',
+          timestamp: new Date().toISOString()
+        }
+      ];
+    }
+  </script>
+</body>
+</html>
